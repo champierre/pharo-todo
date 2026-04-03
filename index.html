@@ -69,30 +69,6 @@ h1 {
 .delete-btn:hover { color: #e94560; background: rgba(233,69,96,0.1); }
 .stats { text-align: center; margin-top: 20px; color: #666; font-size: 0.85rem; }
 .empty { text-align: center; padding: 40px; color: #555; font-size: 1.1rem; }
-.image-section {
-  margin-top: 32px; padding: 20px; border-radius: 12px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-}
-.image-section h3 {
-  font-size: 0.95rem; color: #e94560; margin-bottom: 12px; text-align: center;
-}
-.image-section p { font-size: 0.8rem; color: #666; text-align: center; margin-bottom: 12px; line-height: 1.5; }
-.image-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.image-buttons button, .image-buttons label {
-  padding: 8px 18px; border-radius: 10px; font-size: 0.85rem;
-  cursor: pointer; transition: all 0.2s; font-weight: 500;
-}
-.btn-download {
-  background: transparent; border: 1px solid #4ec9b0; color: #4ec9b0;
-}
-.btn-download:hover { background: rgba(78,201,176,0.1); }
-.btn-upload {
-  background: transparent; border: 1px solid #e94560; color: #e94560;
-  display: inline-block;
-}
-.btn-upload:hover { background: rgba(233,69,96,0.1); }
-.btn-upload input { display: none; }
-.upload-status { text-align: center; margin-top: 8px; font-size: 0.8rem; color: #888; }
 
 </style>
 </head>
@@ -111,15 +87,7 @@ h1 {
   </div>
   <ul class="todo-list" id="todoList"></ul>
   <div class="stats" id="stats"></div>
-  <div class="image-section">
-    <h3>💾 Pharo Image Snapshot</h3>
-    <p>アプリの状態を丸ごとダウンロード・アップロードできます。<br>イメージファイルにTODOデータがそのまま凍結保存されています。</p>
-    <div class="image-buttons">
-      <button class="btn-download" onclick="downloadImage()">⬇ ダウンロード</button>
-      <label class="btn-upload">⬆ アップロード<input type="file" accept=".image" onchange="uploadImage(this)"></label>
-    </div>
-    <div class="upload-status" id="uploadStatus"></div>
-  </div>
+
 </div>
 <script>
 let todos=[], filter="all";
@@ -141,8 +109,6 @@ function render(){
   const done=todos.filter(t=>t.completed).length;
   s.textContent=`${todos.length} タスク中 ${done} 完了`;
 }
-function downloadImage(){window.location.href="/api/image/download";}
-async function uploadImage(input){const f=input.files[0];if(!f)return;const s=document.getElementById("uploadStatus");s.textContent="アップロード中...";const d=new FormData();d.append("image",f);try{await fetch("/api/image/upload",{method:"POST",body:d});s.textContent="アップロード完了。再起動中...";setTimeout(()=>{s.textContent="リロード中...";setTimeout(()=>location.reload(),3000);},1000);}catch(e){s.textContent="エラー: "+e.message;}input.value="";}
 document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing)addTodo();});
 load();
 </script>
