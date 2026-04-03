@@ -62,6 +62,7 @@ reflectHtml := '/home/exedev/reflect.html' asFileReference contents.
 todoPackageClasses := { TodoItem. TodoStore }.
 
 server := ZnServer on: 8000.
+server maximumEntitySize: 200 * 1024 * 1024. "200MB for image upload"
 server onRequestRespond: [ :request |
 	| path method response |
 	path := request uri path.
@@ -98,6 +99,30 @@ server onRequestRespond: [ :request |
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'DELETE' ] ]) ifTrue: [
 		store removeId: (path copyAfterLast: $/) asInteger.
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
+	].
+
+	"=== GET /api/image/download - Download image snapshot ==="
+	(response isNil and: [ path = '/api/image/download' and: [ method = 'GET' ] ]) ifTrue: [ | imageFile bytes |
+		Smalltalk snapshot: true andQuit: false.
+		imageFile := '/home/exedev/Pharo-todo.image' asFileReference.
+		bytes := imageFile binaryReadStream upToEnd.
+		response := ZnResponse ok: (ZnEntity bytes: bytes).
+		response headers at: 'Content-Type' put: 'application/octet-stream'.
+		response headers at: 'Content-Disposition' put: 'attachment; filename="Pharo-todo.image"'.
+	].
+
+	"=== POST /api/image/upload - Upload and restore image ==="
+	(response isNil and: [ path = '/api/image/upload' and: [ method = 'POST' ] ]) ifTrue: [ | part bytes dest |
+		part := request entity.
+		(part isKindOf: ZnMultiPartFormDataEntity)
+			ifTrue: [ bytes := (part partNamed: 'image') entity bytes ]
+			ifFalse: [ bytes := part bytes ].
+		dest := '/home/exedev/Pharo-todo-upload.image' asFileReference.
+		dest binaryWriteStream nextPutAll: bytes; close.
+		'/home/exedev/Pharo-todo.image' asFileReference delete.
+		dest renameTo: 'Pharo-todo.image'.
+		response := ZnResponse ok: (ZnEntity json: '{"ok":true,"message":"Image uploaded. Restarting..."}').
+		[ (Delay forSeconds: 1) wait. Smalltalk snapshot: false andQuit: true ] fork.
 	].
 
 	"=== Reflection page ==="
