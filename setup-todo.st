@@ -1,4 +1,4 @@
-| server store indexHtml reflectHtml todoPackageClasses dataFile |
+| server store indexHtml reflectHtml todoPackageClasses |
 
 "=== Define TodoItem class ==="
 Object subclass: #TodoItem
@@ -13,7 +13,6 @@ TodoItem compile: 'title: aString title := aString'.
 TodoItem compile: 'completed ^ completed'.
 TodoItem compile: 'completed: aBoolean completed := aBoolean'.
 TodoItem compile: 'createdAt ^ createdAt'.
-TodoItem compile: 'createdAt: aString createdAt := aString'.
 TodoItem compile: 'initialize
 	super initialize.
 	completed := false.
@@ -27,14 +26,6 @@ TodoItem compile: 'asDictionary
 		yourself'.
 TodoItem class compile: 'title: aString
 	^ self new title: aString; yourself'.
-TodoItem class compile: 'fromDictionary: aDict
-	| item |
-	item := self new.
-	item id: (aDict at: ''id'').
-	item title: (aDict at: ''title'').
-	item completed: ((aDict at: ''completed'' ifAbsent: [ false ]) == true).
-	item createdAt: (aDict at: ''createdAt'' ifAbsent: [ DateAndTime now printString ]).
-	^ item'.
 
 "=== Define TodoStore class ==="
 Object subclass: #TodoStore
@@ -63,47 +54,7 @@ TodoStore compile: 'toggleId: anInteger
 		ifFound: [ :item | item completed: item completed not ]'.
 TodoStore compile: 'asJsonArray
 	^ (items collect: [ :each | each asDictionary ]) asArray'.
-TodoStore compile: 'loadFromArray: anArray
-	| maxId |
-	items := OrderedCollection new.
-	anArray do: [ :dict |
-		items add: (TodoItem fromDictionary: dict)
-	].
-	maxId := 0.
-	items do: [ :each | each id > maxId ifTrue: [ maxId := each id ] ].
-	nextId := maxId + 1'.
-TodoStore compile: 'exportJson
-	^ STONJSON toString: (Dictionary new
-		at: ''todos'' put: self asJsonArray;
-		at: ''nextId'' put: nextId;
-		yourself)'.
-TodoStore compile: 'importJson: jsonString
-	| data todosArray maxId |
-	data := STONJSON fromString: jsonString.
-	todosArray := data at: ''todos'' ifAbsent: [ #() ].
-	items := OrderedCollection new.
-	todosArray do: [ :dict |
-		items add: (TodoItem fromDictionary: dict)
-	].
-	maxId := 0.
-	items do: [ :each | each id > maxId ifTrue: [ maxId := each id ] ].
-	nextId := (data at: ''nextId'' ifAbsent: [ maxId + 1 ])'.
-
 store := TodoStore new.
-dataFile := '/home/exedev/todo-data.json'.
-
-"=== Load saved data if exists ==="
-dataFile asFileReference exists ifTrue: [
-	| json |
-	Stdio stdout nextPutAll: 'Loading saved data from todo-data.json...'; nextPut: Character lf; flush.
-	json := dataFile asFileReference contents.
-	store importJson: json.
-	Stdio stdout nextPutAll: 'Loaded ', store items size printString, ' todos'; nextPut: Character lf; flush.
-].
-
-"=== Helper to save data ==="
-"We define a block that saves the store to the JSON file"
-"saveData is a block stored in a temp variable"
 
 "=== Load HTML files ==="
 indexHtml := '/home/exedev/index.html' asFileReference contents.
@@ -134,21 +85,18 @@ server onRequestRespond: [ :request |
 		title := body at: 'title' ifAbsent: [ '' ].
 		title ifEmpty: [ title := 'Untitled' ].
 		item := store addTitle: title.
-		dataFile asFileReference writeStreamDo: [ :s | s nextPutAll: store exportJson ].
 		response := ZnResponse ok: (ZnEntity json: (STONJSON toString: item asDictionary))
 	].
 
 	"=== PUT /api/todos/:id (toggle) ==="
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'PUT' ] ]) ifTrue: [
 		store toggleId: (path copyAfterLast: $/) asInteger.
-		dataFile asFileReference writeStreamDo: [ :s | s nextPutAll: store exportJson ].
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
 	].
 
 	"=== DELETE /api/todos/:id ==="
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'DELETE' ] ]) ifTrue: [
 		store removeId: (path copyAfterLast: $/) asInteger.
-		dataFile asFileReference writeStreamDo: [ :s | s nextPutAll: store exportJson ].
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
 	].
 
