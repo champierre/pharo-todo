@@ -1,4 +1,4 @@
-| server store indexHtml reflectHtml todoPackageClasses |
+| server store indexHtml todoPackageClasses |
 
 "=== Define TodoItem class ==="
 Object subclass: #TodoItem
@@ -58,7 +58,6 @@ store := TodoStore new.
 
 "=== Load HTML files ==="
 indexHtml := '/home/exedev/index.html' asFileReference contents.
-reflectHtml := '/home/exedev/reflect.html' asFileReference contents.
 todoPackageClasses := { TodoItem. TodoStore }.
 
 server := ZnServer on: 8000.
@@ -98,11 +97,6 @@ server onRequestRespond: [ :request |
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'DELETE' ] ]) ifTrue: [
 		store removeId: (path copyAfterLast: $/) asInteger.
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
-	].
-
-	"=== Reflection page ==="
-	(response isNil and: [ path = '/reflect' and: [ method = 'GET' ] ]) ifTrue: [
-		response := ZnResponse ok: (ZnEntity html: reflectHtml)
 	].
 
 	"=== GET /api/reflect/classes ==="
@@ -180,6 +174,38 @@ server onRequestRespond: [ :request |
 					response := ZnResponse ok: (ZnEntity json: (STONJSON toString: info))
 				]
 			]
+		]
+	].
+
+	"=== POST /api/reflect/compile - Live recompile a method ==="
+	(response isNil and: [ path = '/api/reflect/compile' and: [ method = 'POST' ] ]) ifTrue: [ | body className source side cls result |
+		body := STONJSON fromString: request contents.
+		className := body at: 'class' ifAbsent: [ '' ].
+		source := body at: 'source' ifAbsent: [ '' ].
+		side := body at: 'side' ifAbsent: [ 'instance' ].
+		cls := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+		cls ifNotNil: [
+			[ side = 'class'
+				ifTrue: [ cls class compile: source ]
+				ifFalse: [ cls compile: source ].
+			  result := Dictionary new
+				at: 'ok' put: true;
+				at: 'message' put: 'Compiled successfully';
+				yourself.
+			  response := ZnResponse ok: (ZnEntity json: (STONJSON toString: result))
+			] on: Error do: [ :err |
+			  result := Dictionary new
+				at: 'ok' put: false;
+				at: 'message' put: err messageText;
+				yourself.
+			  response := ZnResponse ok: (ZnEntity json: (STONJSON toString: result))
+			]
+		] ifNil: [
+			result := Dictionary new
+				at: 'ok' put: false;
+				at: 'message' put: 'Class not found: ', className;
+				yourself.
+			response := ZnResponse ok: (ZnEntity json: (STONJSON toString: result))
 		]
 	].
 

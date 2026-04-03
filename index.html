@@ -9,13 +9,14 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background-attachment: fixed;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   padding: 40px 20px;
   color: #e0e0e0;
 }
-.container { max-width: 600px; width: 100%; }
+.container { max-width: 700px; width: 100%; }
 h1 {
   text-align: center; font-size: 2.5rem; margin-bottom: 8px;
   background: linear-gradient(90deg, #e94560, #0f3460);
@@ -70,12 +71,123 @@ h1 {
 .stats { text-align: center; margin-top: 20px; color: #666; font-size: 0.85rem; }
 .empty { text-align: center; padding: 40px; color: #555; font-size: 1.1rem; }
 
+/* === Reflection Panel === */
+.reflect-toggle {
+  display: flex; justify-content: center; margin-top: 32px;
+}
+.reflect-toggle button {
+  background: transparent; border: 1px solid rgba(233,69,96,0.4); color: #e94560;
+  padding: 10px 24px; border-radius: 10px; cursor: pointer; font-size: 0.9rem;
+  font-weight: 500; transition: all 0.3s; letter-spacing: 0.3px;
+}
+.reflect-toggle button:hover { background: rgba(233,69,96,0.1); border-color: #e94560; }
+.reflect-toggle button.open { background: rgba(233,69,96,0.15); border-color: #e94560; }
+
+.reflect-panel {
+  margin-top: 16px; overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+  max-height: 0; opacity: 0;
+}
+.reflect-panel.open { max-height: 2000px; opacity: 1; }
+
+.reflect-browser {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 10px;
+}
+.reflect-src { margin-bottom: 10px; }
+
+.rpanel {
+  background: rgba(10,10,30,0.7); border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(233,69,96,0.15);
+}
+.rpanel-hd {
+  background: rgba(233,69,96,0.12); padding: 8px 12px; font-weight: 600;
+  color: #e94560; border-bottom: 1px solid rgba(233,69,96,0.25);
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.rpanel-body {
+  max-height: 220px; overflow-y: auto; padding: 6px;
+}
+.rpanel-body::-webkit-scrollbar { width: 6px; }
+.rpanel-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.rpanel-body::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.3); border-radius: 3px; }
+
+.ritem {
+  padding: 7px 10px; cursor: pointer; border-radius: 5px; margin-bottom: 3px;
+  transition: all 0.15s; border: 1px solid transparent; font-size: 0.9rem;
+}
+.ritem:hover { background: rgba(233,69,96,0.12); }
+.ritem.selected { background: rgba(233,69,96,0.25); border-color: #e94560; }
+.ritem-name { color: #fff; font-weight: 500; }
+.ritem-meta { color: #666; font-size: 0.75rem; margin-top: 2px; }
+
+.rsection-title {
+  font-size: 0.78rem; color: #e94560; font-weight: 600; margin-bottom: 4px;
+  padding: 4px 8px; background: rgba(233,69,96,0.08); border-radius: 3px;
+  border-left: 2px solid #e94560;
+}
+
+.src-code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+  color: #d4d4d4; padding: 12px; max-height: 260px; overflow-y: auto;
+}
+.src-code::-webkit-scrollbar { width: 6px; }
+.src-code::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.src-code::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.3); border-radius: 3px; }
+
+.src-editor {
+  width: 100%; min-height: 120px; padding: 12px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px; line-height: 1.5; color: #d4d4d4;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(233,69,96,0.2);
+  border-radius: 0; resize: vertical; outline: none;
+  tab-size: 4;
+}
+.src-editor:focus { border-color: #e94560; }
+.src-toolbar {
+  display: flex; gap: 8px; padding: 8px 12px; align-items: center;
+  background: rgba(233,69,96,0.08); border-top: 1px solid rgba(233,69,96,0.15);
+}
+.btn-compile {
+  padding: 5px 16px; background: #e94560; color: white; border: none;
+  border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-compile:hover { background: #c73550; }
+.btn-compile:disabled { background: #555; cursor: default; }
+.compile-status { font-size: 0.78rem; color: #888; }
+.compile-status.ok { color: #4ec9b0; }
+.compile-status.err { color: #f44; }
+
+.class-detail {
+  padding: 10px 12px; font-size: 0.82rem; color: #999; line-height: 1.6;
+}
+.class-detail b { color: #e94560; font-weight: 600; }
+.class-detail .chain { color: #b0b0b0; }
+.class-detail .chain .arrow { color: #e94560; margin: 0 4px; }
+
+.empty-r { text-align: center; padding: 24px; color: #555; font-size: 0.85rem; font-style: italic; }
+
+/* Syntax highlighting */
+.st-keyword { color: #e94560; font-weight: 500; }
+.st-string { color: #4ec9b0; }
+.st-comment { color: #6a9955; font-style: italic; }
+.st-symbol { color: #ce9178; }
+.st-number { color: #b5cea8; }
+.st-special { color: #c586c0; font-weight: 500; }
+.st-tempvar { color: #dcdcaa; }
+.st-assign { color: #ffffff; font-weight: bold; }
+
+@media (max-width: 600px) {
+  .reflect-browser { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 <div class="container">
   <h1>✅ TODO App</h1>
-  <p class="subtitle">Powered by <span>Pharo Smalltalk</span> · <a href="/reflect" style="color:#e94560;text-decoration:none;border-bottom:1px dotted #e94560">🔍 Live Reflection</a></p>
+  <p class="subtitle">Powered by <span>Pharo Smalltalk</span></p>
   <div class="input-row">
     <input id="newTodo" type="text" placeholder="新しいタスクを入力..." />
     <button onclick="addTodo()">追加</button>
@@ -88,6 +200,35 @@ h1 {
   <ul class="todo-list" id="todoList"></ul>
   <div class="stats" id="stats"></div>
 
+  <!-- Reflection Panel -->
+  <div class="reflect-toggle">
+    <button id="reflectBtn" onclick="toggleReflect()">🔍 Live Reflection</button>
+  </div>
+  <div class="reflect-panel" id="reflectPanel">
+    <div class="reflect-browser">
+      <div class="rpanel">
+        <div class="rpanel-hd">Classes</div>
+        <div class="rpanel-body" id="rClassList">
+          <div class="empty-r">読み込み中...</div>
+        </div>
+      </div>
+      <div class="rpanel">
+        <div class="rpanel-hd">Methods</div>
+        <div class="rpanel-body" id="rMethodList">
+          <div class="empty-r">クラスを選択</div>
+        </div>
+      </div>
+    </div>
+    <div class="reflect-src">
+      <div class="rpanel">
+        <div class="rpanel-hd">Source Code <span style="font-weight:normal;font-size:0.75rem;color:#888;text-transform:none">— 編集して「保存」でライブ反映</span></div>
+        <div id="rSourceView">
+          <div class="empty-r">メソッドを選択</div>
+        </div>
+      </div>
+    </div>
+    <div id="rClassDetail"></div>
+  </div>
 </div>
 <script>
 let todos=[], filter="all";
@@ -111,6 +252,153 @@ function render(){
 }
 document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing)addTodo();});
 load();
+
+/* === Reflection === */
+let rOpen=false, rClasses=[], rSelClass=null, rClassInfo=null;
+
+function toggleReflect(){
+  rOpen=!rOpen;
+  document.getElementById("reflectPanel").classList.toggle("open",rOpen);
+  document.getElementById("reflectBtn").classList.toggle("open",rOpen);
+  if(rOpen && rClasses.length===0) loadClasses();
+}
+
+async function loadClasses(){
+  try{
+    const r=await fetch("/api/reflect/classes");
+    rClasses=await r.json();
+    renderClasses();
+  }catch(e){
+    document.getElementById("rClassList").innerHTML='<div class="empty-r">エラー</div>';
+  }
+}
+
+function renderClasses(){
+  const el=document.getElementById("rClassList");
+  el.innerHTML=rClasses.map(c=>`
+    <div class="ritem${rSelClass===c.name?' selected':''}" onclick="selectClass('${c.name}')">
+      <div class="ritem-name">${c.name}</div>
+      <div class="ritem-meta">⇐ ${c.superclass} · ${c.methodCount} methods</div>
+    </div>`).join("");
+}
+
+async function selectClass(name){
+  rSelClass=name;
+  renderClasses();
+  document.getElementById("rMethodList").innerHTML='<div class="empty-r">読み込み中...</div>';
+  document.getElementById("rSourceView").innerHTML='<div class="empty-r">メソッドを選択</div>';
+  try{
+    const r=await fetch("/api/reflect/class/"+name);
+    rClassInfo=await r.json();
+    renderMethods();
+    renderClassDetail();
+  }catch(e){
+    document.getElementById("rMethodList").innerHTML='<div class="empty-r">エラー</div>';
+  }
+}
+
+let rSelMethod=null, rSelSide=null;
+function renderMethods(){
+  if(!rClassInfo) return;
+  const el=document.getElementById("rMethodList");
+  let h="";
+  if(rClassInfo.instanceMethods&&rClassInfo.instanceMethods.length){
+    h+='<div class="rsection-title">📘 Instance</div>';
+    rClassInfo.instanceMethods.forEach(m=>{
+      const sel=rSelMethod===m.selector&&rSelSide==="instance";
+      h+=`<div class="ritem${sel?' selected':''}" onclick="selectMethod('${esc(m.selector)}','instance')">
+        <div class="ritem-name">${esc(m.selector)}</div>
+        <div class="ritem-meta">${m.protocol}</div></div>`;
+    });
+  }
+  if(rClassInfo.classMethods&&rClassInfo.classMethods.length){
+    h+='<div class="rsection-title">📗 Class</div>';
+    rClassInfo.classMethods.forEach(m=>{
+      const sel=rSelMethod===m.selector&&rSelSide==="class";
+      h+=`<div class="ritem${sel?' selected':''}" onclick="selectMethod('${esc(m.selector)}','class')">
+        <div class="ritem-name">${esc(m.selector)}</div>
+        <div class="ritem-meta">${m.protocol}</div></div>`;
+    });
+  }
+  el.innerHTML=h||'<div class="empty-r">メソッドなし</div>';
+}
+
+async function selectMethod(selector,side){
+  rSelMethod=selector; rSelSide=side;
+  renderMethods();
+  document.getElementById("rSourceView").innerHTML='<div class="empty-r">読み込み中...</div>';
+  try{
+    const cn=side==="class"?rSelClass+" class":rSelClass;
+    const r=await fetch(`/api/reflect/method/${encodeURIComponent(cn)}/${encodeURIComponent(selector)}`);
+    const d=await r.json();
+    document.getElementById("rSourceView").innerHTML=
+      `<textarea class="src-editor" id="srcEditor" spellcheck="false">${escHtml(d.source)}</textarea>`+
+      `<div class="src-toolbar">`+
+        `<button class="btn-compile" onclick="compileSrc()">⌘ 保存 (Ctrl+S)</button>`+
+        `<span class="compile-status" id="compileStatus"></span>`+
+      `</div>`;
+    document.getElementById("srcEditor").addEventListener("keydown",e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();compileSrc();}
+      if(e.key==="Tab"){e.preventDefault();const t=e.target,s=t.selectionStart,en=t.selectionEnd;t.value=t.value.substring(0,s)+"\t"+t.value.substring(en);t.selectionStart=t.selectionEnd=s+1;}
+    });
+  }catch(e){
+    document.getElementById("rSourceView").innerHTML='<div class="empty-r">エラー</div>';
+  }
+}
+
+async function compileSrc(){
+  const editor=document.getElementById("srcEditor");
+  const status=document.getElementById("compileStatus");
+  if(!editor||!rSelClass)return;
+  const btn=document.querySelector(".btn-compile");
+  btn.disabled=true; status.className="compile-status"; status.textContent="コンパイル中...";
+  try{
+    const r=await fetch("/api/reflect/compile",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({class:rSelClass,source:editor.value,side:rSelSide})
+    });
+    const d=await r.json();
+    if(d.ok){
+      status.className="compile-status ok"; status.textContent="✓ "+d.message;
+      loadClasses();
+    }else{
+      status.className="compile-status err"; status.textContent="✗ "+d.message;
+    }
+  }catch(e){
+    status.className="compile-status err"; status.textContent="✗ "+e.message;
+  }
+  btn.disabled=false;
+}
+
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function renderClassDetail(){
+  if(!rClassInfo){document.getElementById("rClassDetail").innerHTML="";return;}
+  const c=rClassInfo;
+  const chain=[c.name,c.superclass,...(c.superclassChain||[])];
+  const chainHtml=chain.map((n,i)=>i<chain.length-1?`<span>${n}</span><span class="arrow">⇐</span>`:`<span>${n}</span>`).join("");
+  document.getElementById("rClassDetail").innerHTML=`<div class="class-detail">
+    <b>継承:</b> <span class="chain">${chainHtml}</span><br>
+    <b>インスタンス変数:</b> ${(c.instanceVariables||[]).join(", ")||"(なし)"}<br>
+    <b>クラス変数:</b> ${(c.classVariables||[]).join(", ")||"(なし)"}
+  </div>`;
+}
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+function hlSt(code){
+  code=code.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  code=code.replace(/"([^"]*)"/g,'<span class="st-comment">"$1"</span>');
+  code=code.replace(/'([^']*)'/g,"<span class='st-string'>'$1'</span>");
+  code=code.replace(/#\w+/g,'<span class="st-symbol">$&</span>');
+  code=code.replace(/\b\d+(\.\d+)?\b/g,'<span class="st-number">$&</span>');
+  ["self","super","true","false","nil"].forEach(w=>{
+    code=code.replace(new RegExp("\\b"+w+"\\b","g"),`<span class="st-special">${w}</span>`);
+  });
+  code=code.replace(/:=/g,'<span class="st-assign">:=</span>');
+  code=code.replace(/\|([^|]*)\|/g,(m,v)=>`<span class="st-tempvar">|${v}|</span>`);
+  return code;
+}
 </script>
 </body>
 </html>
