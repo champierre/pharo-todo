@@ -107,7 +107,7 @@ function render(){
   const done=todos.filter(t=>t.completed).length;
   s.textContent=`${todos.length} タスク中 ${done} 完了`;
 }
-document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="Enter")addTodo();});
+document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing)addTodo();});
 load();
 </script>
 </body>
