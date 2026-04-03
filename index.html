@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pharo TODO App</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #e0e0e0;
+}
+.container { max-width: 600px; width: 100%; }
+h1 {
+  text-align: center; font-size: 2.5rem; margin-bottom: 8px;
+  background: linear-gradient(90deg, #e94560, #0f3460);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+.subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.9rem; }
+.subtitle span { color: #e94560; font-weight: bold; }
+.input-row { display: flex; gap: 10px; margin-bottom: 24px; }
+.input-row input {
+  flex: 1; padding: 14px 18px; border: 2px solid #333; border-radius: 12px;
+  font-size: 1rem; background: #1a1a2e; color: #e0e0e0; outline: none;
+  transition: border-color 0.2s;
+}
+.input-row input:focus { border-color: #e94560; }
+.input-row button {
+  padding: 14px 28px; background: #e94560; color: white; border: none;
+  border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.input-row button:hover { background: #c73550; }
+.input-row button:active { transform: scale(0.96); }
+.filters { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+.filters button {
+  padding: 6px 16px; border: 1px solid #333; background: transparent;
+  color: #888; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.filters button.active { background: #e94560; color: white; border-color: #e94560; }
+.todo-list { list-style: none; }
+.todo-item {
+  display: flex; align-items: center; gap: 12px; padding: 16px;
+  background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 8px;
+  transition: background 0.2s, transform 0.15s; border: 1px solid rgba(255,255,255,0.05);
+}
+.todo-item:hover { background: rgba(255,255,255,0.08); transform: translateX(4px); }
+.todo-item.completed .todo-title { text-decoration: line-through; color: #666; }
+.check-btn {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid #555;
+  background: transparent; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; transition: all 0.2s;
+  color: transparent; font-size: 14px;
+}
+.todo-item.completed .check-btn { background: #e94560; border-color: #e94560; color: white; }
+.todo-title { flex: 1; font-size: 1rem; word-break: break-word; }
+.delete-btn {
+  background: none; border: none; color: #555; cursor: pointer;
+  font-size: 1.2rem; padding: 4px 8px; border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.delete-btn:hover { color: #e94560; background: rgba(233,69,96,0.1); }
+.stats { text-align: center; margin-top: 20px; color: #666; font-size: 0.85rem; }
+.empty { text-align: center; padding: 40px; color: #555; font-size: 1.1rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>✅ TODO App</h1>
+  <p class="subtitle">Powered by <span>Pharo Smalltalk</span></p>
+  <div class="input-row">
+    <input id="newTodo" type="text" placeholder="新しいタスクを入力..." />
+    <button onclick="addTodo()">追加</button>
+  </div>
+  <div class="filters">
+    <button class="active" onclick="setFilter(this,'all')">すべて</button>
+    <button onclick="setFilter(this,'active')">未完了</button>
+    <button onclick="setFilter(this,'completed')">完了</button>
+  </div>
+  <ul class="todo-list" id="todoList"></ul>
+  <div class="stats" id="stats"></div>
+</div>
+<script>
+let todos=[], filter="all";
+async function load(){const r=await fetch("/api/todos");todos=await r.json();render();}
+async function addTodo(){const i=document.getElementById("newTodo"),t=i.value.trim();if(!t)return;await fetch("/api/todos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:t})});i.value="";load();}
+async function toggle(id){await fetch("/api/todos/"+id,{method:"PUT"});load();}
+async function del(id){await fetch("/api/todos/"+id,{method:"DELETE"});load();}
+function setFilter(btn,f){filter=f;document.querySelectorAll(".filters button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");render();}
+function render(){
+  const list=document.getElementById("todoList"),s=document.getElementById("stats");
+  let filtered=todos;
+  if(filter==="active")filtered=todos.filter(t=>!t.completed);
+  if(filter==="completed")filtered=todos.filter(t=>t.completed);
+  if(filtered.length===0){list.innerHTML='<div class="empty">タスクがありません 🌟</div>';
+  }else{list.innerHTML=filtered.map(t=>`<li class="todo-item ${t.completed?"completed":""}">
+    <button class="check-btn" onclick="toggle(${t.id})">✓</button>
+    <span class="todo-title">${t.title.replace(/</g,"&lt;")}</span>
+    <button class="delete-btn" onclick="del(${t.id})">✕</button></li>`).join("");}
+  const done=todos.filter(t=>t.completed).length;
+  s.textContent=`${todos.length} タスク中 ${done} 完了`;
+}
+document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="Enter")addTodo();});
+load();
+</script>
+</body>
+</html>

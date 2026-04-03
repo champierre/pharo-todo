@@ -1,0 +1,8 @@
+*.image
+*.changes
+*.sources
+pharo-vm/
+pharo
+pharo-ui
+fresh.zip
+*.zip
