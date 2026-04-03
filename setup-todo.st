@@ -1,92 +1,60 @@
-| server store indexHtml reflectHtml todoPackageClasses isResume saveImage |
+| server store indexHtml reflectHtml todoPackageClasses |
 
-"=== Check if resuming from a saved image ==="
-isResume := Smalltalk globals includesKey: #TodoAppStore.
+"=== Define TodoItem class ==="
+Object subclass: #TodoItem
+	instanceVariableNames: 'id title completed createdAt'
+	classVariableNames: ''
+	package: 'TodoApp'.
 
-Stdio stdout
-	nextPutAll: (isResume
-		ifTrue: [ 'Resuming from saved image - data restored' ]
-		ifFalse: [ 'First run - creating fresh store' ]);
-	nextPut: Character lf; flush.
+TodoItem compile: 'id ^ id'.
+TodoItem compile: 'id: anInteger id := anInteger'.
+TodoItem compile: 'title ^ title'.
+TodoItem compile: 'title: aString title := aString'.
+TodoItem compile: 'completed ^ completed'.
+TodoItem compile: 'completed: aBoolean completed := aBoolean'.
+TodoItem compile: 'createdAt ^ createdAt'.
+TodoItem compile: 'initialize
+	super initialize.
+	completed := false.
+	createdAt := DateAndTime now'.
+TodoItem compile: 'asDictionary
+	^ Dictionary new
+		at: ''id'' put: id;
+		at: ''title'' put: title;
+		at: ''completed'' put: completed;
+		at: ''createdAt'' put: createdAt printString;
+		yourself'.
+TodoItem class compile: 'title: aString
+	^ self new title: aString; yourself'.
 
-isResume ifFalse: [
-	"=== Define TodoItem class ==="
-	Object subclass: #TodoItem
-		instanceVariableNames: 'id title completed createdAt'
-		classVariableNames: ''
-		package: 'TodoApp'.
+"=== Define TodoStore class ==="
+Object subclass: #TodoStore
+	instanceVariableNames: 'items nextId'
+	classVariableNames: ''
+	package: 'TodoApp'.
 
-	TodoItem compile: 'id ^ id'.
-	TodoItem compile: 'id: anInteger id := anInteger'.
-	TodoItem compile: 'title ^ title'.
-	TodoItem compile: 'title: aString title := aString'.
-	TodoItem compile: 'completed ^ completed'.
-	TodoItem compile: 'completed: aBoolean completed := aBoolean'.
-	TodoItem compile: 'createdAt ^ createdAt'.
-	TodoItem compile: 'initialize
-		super initialize.
-		completed := false.
-		createdAt := DateAndTime now'.
-	TodoItem compile: 'asDictionary
-		^ Dictionary new
-			at: ''id'' put: id;
-			at: ''title'' put: title;
-			at: ''completed'' put: completed;
-			at: ''createdAt'' put: createdAt printString;
-			yourself'.
-	TodoItem class compile: 'title: aString
-		^ self new title: aString; yourself'.
+TodoStore compile: 'initialize
+	super initialize.
+	items := OrderedCollection new.
+	nextId := 1'.
+TodoStore compile: 'items ^ items'.
+TodoStore compile: 'addTitle: aString
+	| item |
+	item := TodoItem title: aString.
+	item id: nextId.
+	nextId := nextId + 1.
+	items add: item.
+	^ item'.
+TodoStore compile: 'removeId: anInteger
+	items removeAllSuchThat: [ :each | each id = anInteger ]'.
+TodoStore compile: 'toggleId: anInteger
+	items
+		detect: [ :each | each id = anInteger ]
+		ifFound: [ :item | item completed: item completed not ]'.
+TodoStore compile: 'asJsonArray
+	^ (items collect: [ :each | each asDictionary ]) asArray'.
 
-	"=== Define TodoStore class ==="
-	Object subclass: #TodoStore
-		instanceVariableNames: 'items nextId'
-		classVariableNames: ''
-		package: 'TodoApp'.
-
-	TodoStore compile: 'initialize
-		super initialize.
-		items := OrderedCollection new.
-		nextId := 1'.
-	TodoStore compile: 'items ^ items'.
-	TodoStore compile: 'addTitle: aString
-		| item |
-		item := TodoItem title: aString.
-		item id: nextId.
-		nextId := nextId + 1.
-		items add: item.
-		^ item'.
-	TodoStore compile: 'removeId: anInteger
-		items removeAllSuchThat: [ :each | each id = anInteger ]'.
-	TodoStore compile: 'toggleId: anInteger
-		items
-			detect: [ :each | each id = anInteger ]
-			ifFound: [ :item | item completed: item completed not ]'.
-	TodoStore compile: 'asJsonArray
-		^ (items collect: [ :each | each asDictionary ]) asArray'.
-
-	"=== Create store and register in globals ==="
-	store := TodoStore new.
-	Smalltalk globals at: #TodoAppStore put: store.
-] ifTrue: [
-	"=== Resume: reuse existing store ==="
-	store := Smalltalk globals at: #TodoAppStore.
-	Stdio stdout
-		nextPutAll: 'Restored ';
-		nextPutAll: store items size printString;
-		nextPutAll: ' todos from image';
-		nextPut: Character lf; flush.
-].
-
-"=== Save helper: fork image snapshot after data changes ==="
-saveImage := [
-	[ (Delay forMilliseconds: 500) wait.
-	  Smalltalk snapshot: true andQuit: false.
-	  Stdio stdout nextPutAll: 'Image saved'; nextPut: Character lf; flush
-	] fork
-].
-
-"=== Stop any existing Zinc servers (stale from saved image) ==="
-ZnServer managedServers do: [ :s | [ s stop ] on: Error do: [ :e | ] ].
+store := TodoStore new.
 
 "=== Load HTML files (always reload for latest changes) ==="
 indexHtml := '/home/exedev/index.html' asFileReference contents.
@@ -94,7 +62,6 @@ reflectHtml := '/home/exedev/reflect.html' asFileReference contents.
 todoPackageClasses := { TodoItem. TodoStore }.
 
 server := ZnServer on: 8000.
-server maximumEntitySize: 200 * 1024 * 1024. "200MB"
 server onRequestRespond: [ :request |
 	| path method response |
 	path := request uri path.
@@ -118,48 +85,19 @@ server onRequestRespond: [ :request |
 		title := body at: 'title' ifAbsent: [ '' ].
 		title ifEmpty: [ title := 'Untitled' ].
 		item := store addTitle: title.
-		saveImage value.
 		response := ZnResponse ok: (ZnEntity json: (STONJSON toString: item asDictionary))
 	].
 
 	"=== PUT /api/todos/:id (toggle) ==="
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'PUT' ] ]) ifTrue: [
 		store toggleId: (path copyAfterLast: $/) asInteger.
-		saveImage value.
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
 	].
 
 	"=== DELETE /api/todos/:id ==="
 	(response isNil and: [ (path beginsWith: '/api/todos/') and: [ method = 'DELETE' ] ]) ifTrue: [
 		store removeId: (path copyAfterLast: $/) asInteger.
-		saveImage value.
 		response := ZnResponse ok: (ZnEntity json: '{"ok":true}')
-	].
-
-	"=== GET /api/image/download - Download image snapshot ==="
-	(response isNil and: [ path = '/api/image/download' and: [ method = 'GET' ] ]) ifTrue: [ | imageFile bytes |
-		Smalltalk snapshot: true andQuit: false.
-		imageFile := '/home/exedev/Pharo-todo.image' asFileReference.
-		bytes := imageFile binaryReadStream upToEnd.
-		response := ZnResponse ok: (ZnEntity bytes: bytes).
-		response headers at: 'Content-Type' put: 'application/octet-stream'.
-		response headers at: 'Content-Disposition' put: 'attachment; filename="Pharo-todo.image"'.
-	].
-
-	"=== POST /api/image/upload - Upload and restore image ==="
-	(response isNil and: [ path = '/api/image/upload' and: [ method = 'POST' ] ]) ifTrue: [ | part bytes dest |
-		part := request entity.
-		(part isKindOf: ZnMultiPartFormDataEntity)
-			ifTrue: [ bytes := (part partNamed: 'image') entity bytes ]
-			ifFalse: [ bytes := part bytes ].
-		dest := '/home/exedev/Pharo-todo-upload.image' asFileReference.
-		dest binaryWriteStream nextPutAll: bytes; close.
-		"Replace current image and restart via exit"
-		'/home/exedev/Pharo-todo.image' asFileReference delete.
-		dest renameTo: 'Pharo-todo.image'.
-		response := ZnResponse ok: (ZnEntity json: '{"ok":true,"message":"Image uploaded. Restarting..."}').
-		"Schedule restart after response is sent"
-		[ (Delay forSeconds: 1) wait. Smalltalk snapshot: false andQuit: true ] fork.
 	].
 
 	"=== Reflection page ==="
