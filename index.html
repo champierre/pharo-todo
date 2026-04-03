@@ -72,23 +72,19 @@ h1 {
 .empty { text-align: center; padding: 40px; color: #555; font-size: 1.1rem; }
 
 /* === Reflection Panel === */
-.reflect-toggle {
-  display: flex; justify-content: center; margin-top: 32px;
+.reflect-header {
+  margin-top: 36px; text-align: center; padding-bottom: 12px;
+  border-bottom: 1px solid rgba(233,69,96,0.2); margin-bottom: 16px;
 }
-.reflect-toggle button {
-  background: transparent; border: 1px solid rgba(233,69,96,0.4); color: #e94560;
-  padding: 10px 24px; border-radius: 10px; cursor: pointer; font-size: 0.9rem;
-  font-weight: 500; transition: all 0.3s; letter-spacing: 0.3px;
+.reflect-header-title {
+  font-size: 1.3rem; font-weight: 700; color: #e94560;
+  margin-bottom: 4px;
 }
-.reflect-toggle button:hover { background: rgba(233,69,96,0.1); border-color: #e94560; }
-.reflect-toggle button.open { background: rgba(233,69,96,0.15); border-color: #e94560; }
+.reflect-header-sub {
+  font-size: 0.82rem; color: #888;
+}
 
-.reflect-panel {
-  margin-top: 16px; overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.3s ease;
-  max-height: 0; opacity: 0;
-}
-.reflect-panel.open { max-height: 2000px; opacity: 1; }
+.reflect-panel { overflow: hidden; }
 
 .reflect-browser {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
@@ -179,8 +175,46 @@ h1 {
 .st-tempvar { color: #dcdcaa; }
 .st-assign { color: #ffffff; font-weight: bold; }
 
+/* === Demo Guide === */
+.demo-guide {
+  margin-top: 12px; padding: 16px; border-radius: 8px;
+  background: rgba(233,69,96,0.05); border: 1px solid rgba(233,69,96,0.15);
+}
+.demo-title {
+  font-size: 1rem; font-weight: 700; color: #e94560; margin-bottom: 6px;
+}
+.demo-guide > p {
+  font-size: 0.82rem; color: #999; line-height: 1.6; margin-bottom: 12px;
+}
+.demo-guide > p b { color: #e0e0e0; }
+.demo-cards {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+}
+.demo-card {
+  padding: 12px; border-radius: 8px; cursor: pointer;
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(233,69,96,0.15);
+  transition: all 0.2s;
+}
+.demo-card:hover { border-color: #e94560; background: rgba(233,69,96,0.1); transform: translateY(-2px); }
+.demo-card-title {
+  font-size: 0.88rem; font-weight: 600; color: #fff; margin-bottom: 4px;
+}
+.demo-card-desc {
+  font-size: 0.75rem; color: #888; line-height: 1.4;
+}
+.demo-card-desc code {
+  color: #4ec9b0; background: rgba(78,201,176,0.1); padding: 1px 4px;
+  border-radius: 3px; font-size: 0.8em;
+}
+.demo-status {
+  margin-top: 10px; font-size: 0.8rem; text-align: center; min-height: 1.2em;
+}
+.demo-status.ok { color: #4ec9b0; }
+.demo-status.err { color: #f44; }
+
 @media (max-width: 600px) {
   .reflect-browser { grid-template-columns: 1fr; }
+  .demo-cards { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -201,10 +235,11 @@ h1 {
   <div class="stats" id="stats"></div>
 
   <!-- Reflection Panel -->
-  <div class="reflect-toggle">
-    <button id="reflectBtn" onclick="toggleReflect()">🔍 Live Reflection</button>
+  <div class="reflect-header">
+    <div class="reflect-header-title">🔍 Live Reflection</div>
+    <div class="reflect-header-sub">Pharoは実行中のシステムをその場で書き換えられる言語です</div>
   </div>
-  <div class="reflect-panel" id="reflectPanel">
+  <div class="reflect-panel open" id="reflectPanel">
     <div class="reflect-browser">
       <div class="rpanel">
         <div class="rpanel-hd">Classes</div>
@@ -228,6 +263,25 @@ h1 {
       </div>
     </div>
     <div id="rClassDetail"></div>
+    <div class="demo-guide" id="demoGuide">
+      <div class="demo-title">⚡ ライブ編集を試してみよう</div>
+      <p>Pharoは<b>実行中のシステムをその場で書き換えられる</b>言語です。<br>下の例をクリックするだけで体験できます。</p>
+      <div class="demo-cards">
+        <div class="demo-card" onclick="runDemo('star')">
+          <div class="demo-card-title">★ タイトルに★を付ける</div>
+          <div class="demo-card-desc">TodoItem の <code>asDictionary</code> を変更し、<br>全タスク名の先頭に ★ を追加</div>
+        </div>
+        <div class="demo-card" onclick="runDemo('upper')">
+          <div class="demo-card-title">🔠 タイトルを大文字に</div>
+          <div class="demo-card-desc">TodoItem の <code>asDictionary</code> を変更し、<br>全タスク名を大文字(uppercase)に変換</div>
+        </div>
+        <div class="demo-card" onclick="runDemo('reset')">
+          <div class="demo-card-title">↩ 元に戻す</div>
+          <div class="demo-card-desc">asDictionary を<br>オリジナルの状態に復元</div>
+        </div>
+      </div>
+      <div class="demo-status" id="demoStatus"></div>
+    </div>
   </div>
 </div>
 <script>
@@ -254,14 +308,8 @@ document.getElementById("newTodo").addEventListener("keydown",e=>{if(e.key==="En
 load();
 
 /* === Reflection === */
-let rOpen=false, rClasses=[], rSelClass=null, rClassInfo=null;
-
-function toggleReflect(){
-  rOpen=!rOpen;
-  document.getElementById("reflectPanel").classList.toggle("open",rOpen);
-  document.getElementById("reflectBtn").classList.toggle("open",rOpen);
-  if(rOpen && rClasses.length===0) loadClasses();
-}
+let rOpen=true, rClasses=[], rSelClass=null, rClassInfo=null;
+loadClasses();
 
 async function loadClasses(){
   try{
@@ -385,6 +433,35 @@ function renderClassDetail(){
 }
 
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* === Demo === */
+const DEMO_SRC={
+  star: `asDictionary\n\t^ Dictionary new\n\t\tat: 'id' put: id;\n\t\tat: 'title' put: '\u2605 ', title;\n\t\tat: 'completed' put: completed;\n\t\tat: 'createdAt' put: createdAt printString;\n\t\tyourself`,
+  upper: `asDictionary\n\t^ Dictionary new\n\t\tat: 'id' put: id;\n\t\tat: 'title' put: title asUppercase;\n\t\tat: 'completed' put: completed;\n\t\tat: 'createdAt' put: createdAt printString;\n\t\tyourself`,
+  reset: `asDictionary\n\t^ Dictionary new\n\t\tat: 'id' put: id;\n\t\tat: 'title' put: title;\n\t\tat: 'completed' put: completed;\n\t\tat: 'createdAt' put: createdAt printString;\n\t\tyourself`
+};
+const DEMO_LABEL={star:'\u2605 \u30bf\u30a4\u30c8\u30eb\u306b\u2605\u3092\u4ed8\u3051\u307e\u3057\u305f',upper:'\ud83d\udd20 \u30bf\u30a4\u30c8\u30eb\u3092\u5927\u6587\u5b57\u306b\u3057\u307e\u3057\u305f',reset:'\u21a9 \u5143\u306b\u623b\u3057\u307e\u3057\u305f'};
+
+async function runDemo(key){
+  const st=document.getElementById('demoStatus');
+  st.className='demo-status'; st.textContent='\u30b3\u30f3\u30d1\u30a4\u30eb\u4e2d...';
+  try{
+    const r=await fetch('/api/reflect/compile',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({class:'TodoItem',source:DEMO_SRC[key],side:'instance'})
+    });
+    const d=await r.json();
+    if(d.ok){
+      st.className='demo-status ok'; st.textContent='\u2713 '+DEMO_LABEL[key];
+      load();
+      if(rSelClass==='TodoItem'&&rSelMethod==='asDictionary') selectMethod('asDictionary','instance');
+    } else {
+      st.className='demo-status err'; st.textContent='\u2717 '+d.message;
+    }
+  }catch(e){
+    st.className='demo-status err'; st.textContent='\u2717 '+e.message;
+  }
+}
 
 function hlSt(code){
   code=code.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
